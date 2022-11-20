@@ -19,19 +19,14 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class ImageStore {
   Logger log = LoggerFactory.getLogger(ImageStore.class);
-  private final String imageFolderPath = System.getProperty("user.dir") + "\\upload";
-  private final String uploadDataJsonPath = System.getProperty("user.dir") + "\\src\\main\\resources\\uploadData.json";
-  private File imageFolder;
-  private File uploadDataJson;
+  private final File imageFolder = new File(System.getProperty("user.dir") + "\\upload");
+  private final File uploadDataJson = new File(System.getProperty("user.dir") + "\\src\\main\\resources\\uploadData.json");
 
   @Autowired
   private SignService signService;
 
   @PostConstruct
   private void init(){
-    imageFolder = new File(imageFolderPath);
-    uploadDataJson = new File(uploadDataJsonPath);
-
     if(!imageFolder.exists()){ //If the upload folder does not exist, we create it after construction
       imageFolder.mkdirs();
     }
@@ -68,11 +63,14 @@ public class ImageStore {
     }
   }
 
+  //We store the file with the name of its UUID. Its "name" in ImageMeta stays the same, but this way we can have multiple images with the same name,
+  //without the new image overwriting the old one.
   public void storeNewImage(MultipartFile upload) throws IOException, SignException {
+    String id = UUID.randomUUID().toString();
     ImageMeta newImage = ImageMeta.builder()
-      .id(UUID.randomUUID().toString())
-      .name(upload.getOriginalFilename())
-      .path(imageFolder + "\\" + upload.getOriginalFilename())
+      .id(id) //this is the id of the image, and its "actual name" in storage
+      .name(upload.getOriginalFilename()) //this will be displayed in thr frontend
+      .path(imageFolder + "\\" + id + "." + upload.getOriginalFilename().substring(upload.getOriginalFilename().lastIndexOf("."))) //path to the renamed file
       .mimeType(upload.getContentType())
       .size(upload.getSize())
       .digitalSign(signService.signImage(upload.getBytes()))

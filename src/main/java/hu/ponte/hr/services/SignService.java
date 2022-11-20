@@ -15,8 +15,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class SignService {
 
-  private File privateKeyFile = new File(System.getProperty("user.dir") + "\\src\\main\\resources\\config\\keys\\key.private");
-  private File publicKeyFile = new File(System.getProperty("user.dir") + "\\src\\main\\resources\\config\\keys\\key.pub");
+  private final File privateKeyFile = new File(System.getProperty("user.dir") + "\\src\\main\\resources\\config\\keys\\key.private");
+  private final File publicKeyFile = new File(System.getProperty("user.dir") + "\\src\\main\\resources\\config\\keys\\key.pub");
 
   public String signImage(byte[] imageBytes) throws SignException {
     try {

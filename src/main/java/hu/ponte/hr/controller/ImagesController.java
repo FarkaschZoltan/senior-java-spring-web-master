@@ -35,7 +35,7 @@ public class ImagesController {
   public List<ImageMeta> listImages() {
     try {
       return imageStore.getImages();
-    } catch(IOException e){
+    } catch (IOException e) {
       log.error(e.getMessage(), e);
       return new ArrayList<>();
     }
@@ -43,19 +43,22 @@ public class ImagesController {
 
   @GetMapping("preview/{id}")
   public void getImage(@PathVariable("id") String id, HttpServletResponse response) {
-    try{
+    try {
       ImageMeta image = imageStore.getImage(id);
-      byte[] fileBytes = Files.readAllBytes(Paths.get(image.getPath()));
+      if(image != null){
+        byte[] fileBytes = Files.readAllBytes(Paths.get(image.getPath()));
 
-      if(signService.verifySignature(fileBytes, image.getDigitalSign())){
-        response.setContentType("image\\" + image.getMimeType());
-        response.getOutputStream().write(fileBytes, 0, fileBytes.length);
-        response.getOutputStream().close();
+        if (signService.verifySignature(fileBytes, image.getDigitalSign())) {
+          response.setContentType(image.getMimeType());
+          response.getOutputStream().write(fileBytes, 0, fileBytes.length);
+          response.getOutputStream().close();
+        } else {
+          response.sendError(500);
+        }
       } else {
         response.sendError(500);
       }
-
-    } catch(IOException | SignException e) {
+    } catch (IOException | SignException e) {
       log.error(e.getMessage(), e);
     }
   }
