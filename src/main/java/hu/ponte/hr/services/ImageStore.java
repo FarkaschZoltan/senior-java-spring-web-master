@@ -13,20 +13,42 @@ import javax.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class ImageStore {
   Logger log = LoggerFactory.getLogger(ImageStore.class);
-  private final File imageFolder = new File(System.getProperty("user.dir") + "\\upload");
-  private final File uploadDataJson = new File(System.getProperty("user.dir") + "\\src\\main\\resources\\uploadData.json");
+  private File imageFolder;
+  private File uploadDataJson;
 
   @Autowired
   private SignService signService;
 
   @PostConstruct
   private void init(){
+    imageFolder = new File(System.getProperty("user.dir") + "\\upload");
+    uploadDataJson = new File(System.getProperty("user.dir") + "\\src\\main\\resources\\uploadData.json");
+
+    if(!imageFolder.exists()){ //If the upload folder does not exist, we create it after construction
+      imageFolder.mkdirs();
+    }
+
+    if(!uploadDataJson.exists()){ //If the uploadData.json does not exist, we create it after construction
+      try {
+        uploadDataJson.createNewFile();
+      } catch (IOException e) {
+        log.error("JSON file could not be created", e);
+      }
+    }
+  }
+
+
+  public void initTest(){
+    imageFolder = new File(System.getProperty("user.dir") + "\\src\\test\\resources\\upload");
+    uploadDataJson = new File(System.getProperty("user.dir") + "\\src\\test\\resources\\uploadData.json");
+
     if(!imageFolder.exists()){ //If the upload folder does not exist, we create it after construction
       imageFolder.mkdirs();
     }
@@ -65,12 +87,12 @@ public class ImageStore {
 
   //We store the file with the name of its UUID. Its "name" in ImageMeta stays the same, but this way we can have multiple images with the same name,
   //without the new image overwriting the old one.
-  public void storeNewImage(MultipartFile upload) throws IOException, SignException {
+  public String storeNewImage(MultipartFile upload) throws IOException, SignException {
     String id = UUID.randomUUID().toString();
     ImageMeta newImage = ImageMeta.builder()
       .id(id) //this is the id of the image, and its "actual name" in storage
       .name(upload.getOriginalFilename()) //this will be displayed in thr frontend
-      .path(imageFolder + "\\" + id + "." + upload.getOriginalFilename().substring(upload.getOriginalFilename().lastIndexOf("."))) //path to the renamed file
+      .path(imageFolder + "\\" + id + upload.getOriginalFilename().substring(upload.getOriginalFilename().lastIndexOf("."))) //path to the renamed file
       .mimeType(upload.getContentType())
       .size(upload.getSize())
       .digitalSign(signService.signImage(upload.getBytes()))
@@ -83,5 +105,7 @@ public class ImageStore {
     mapper.writeValue(uploadDataJson, images);
 
     upload.transferTo(new File(newImage.getPath()));
+
+    return id;
   }
 }
